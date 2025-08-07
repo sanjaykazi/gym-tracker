@@ -261,9 +261,13 @@ class GymTracker {
         };
         
         this.currentWorkout.exercises.push(workoutExercise);
+        const newIndex = this.currentWorkout.exercises.length - 1;
         
         // Render the exercise
-        this.renderWorkoutExercise(workoutExercise, this.currentWorkout.exercises.length - 1);
+        this.renderWorkoutExercise(workoutExercise, newIndex);
+
+        // Add the first set
+        this.addSet(newIndex);
         
         // Reset select
         selectElement.value = '';
@@ -293,67 +297,62 @@ class GymTracker {
         
         container.appendChild(exerciseDiv);
         
-        // Add first set automatically
-        this.addSet(index);
+        // Render existing sets
+        this.rerenderExerciseSets(index);
+    }
+
+    _renderSet(exerciseIndex, setIndex) {
+        const exercise = this.currentWorkout.exercises[exerciseIndex];
+        const set = exercise.sets[setIndex];
+        const setsContainer = document.getElementById(`sets-${exerciseIndex}`);
+        const setDiv = document.createElement('div');
+        setDiv.className = 'set-entry';
+
+        let setHTML = `<div class="set-number">Set ${setIndex + 1}</div>`;
+
+        if (exercise.type === 'weight') {
+            setHTML += `
+                <input type="number" class="set-input" placeholder="Weight" value="${set.weight}"
+                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'weight', this.value)">
+                <input type="number" class="set-input" placeholder="Reps" value="${set.reps}"
+                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'reps', this.value)">
+                <div></div>
+            `;
+        } else if (exercise.type === 'time') {
+            setHTML += `
+                <input type="number" class="set-input" placeholder="Time (sec)" value="${set.time}"
+                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'time', this.value)">
+                <div></div>
+                <div></div>
+            `;
+        } else if (exercise.type === 'distance') {
+            setHTML += `
+                <input type="number" class="set-input" placeholder="Distance" value="${set.distance}"
+                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'distance', this.value)">
+                <input type="number" class="set-input" placeholder="Time (min)" value="${set.time}"
+                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'time', this.value)">
+                <div></div>
+            `;
+        }
+
+        setHTML += `
+            <button class="btn btn-danger btn-sm" onclick="app.removeSet(${exerciseIndex}, ${setIndex})">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        
+        setDiv.innerHTML = setHTML;
+        setsContainer.appendChild(setDiv);
     }
 
     addSet(exerciseIndex) {
         const exercise = this.currentWorkout.exercises[exerciseIndex];
-        const setIndex = exercise.sets.length;
-        
-        exercise.sets.push({
-            weight: '',
-            reps: '',
-            time: '',
-            distance: ''
-        });
-        
-        const setsContainer = document.getElementById(`sets-${exerciseIndex}`);
-        const setDiv = document.createElement('div');
-        setDiv.className = 'set-entry';
-        
-        if (exercise.type === 'weight') {
-            setDiv.innerHTML = `
-                <div class="set-number">Set ${setIndex + 1}</div>
-                <input type="number" class="set-input" placeholder="Weight" 
-                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'weight', this.value)">
-                <input type="number" class="set-input" placeholder="Reps" 
-                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'reps', this.value)">
-                <div></div>
-                <button class="btn btn-danger btn-sm" onclick="app.removeSet(${exerciseIndex}, ${setIndex})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-        } else if (exercise.type === 'time') {
-            setDiv.innerHTML = `
-                <div class="set-number">Set ${setIndex + 1}</div>
-                <input type="number" class="set-input" placeholder="Time (sec)" 
-                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'time', this.value)">
-                <div></div>
-                <div></div>
-                <button class="btn btn-danger btn-sm" onclick="app.removeSet(${exerciseIndex}, ${setIndex})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-        } else if (exercise.type === 'distance') {
-            setDiv.innerHTML = `
-                <div class="set-number">Set ${setIndex + 1}</div>
-                <input type="number" class="set-input" placeholder="Distance" 
-                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'distance', this.value)">
-                <input type="number" class="set-input" placeholder="Time (min)" 
-                       onchange="app.updateSet(${exerciseIndex}, ${setIndex}, 'time', this.value)">
-                <div></div>
-                <button class="btn btn-danger btn-sm" onclick="app.removeSet(${exerciseIndex}, ${setIndex})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            `;
-        }
-        
-        setsContainer.appendChild(setDiv);
+        exercise.sets.push({ weight: '', reps: '', time: '', distance: '' });
+        this.rerenderExerciseSets(exerciseIndex);
     }
 
     updateSet(exerciseIndex, setIndex, field, value) {
-        if (this.currentWorkout && this.currentWorkout.exercises[exerciseIndex]) {
+        if (this.currentWorkout && this.currentWorkout.exercises[exerciseIndex] && this.currentWorkout.exercises[exerciseIndex].sets[setIndex]) {
             this.currentWorkout.exercises[exerciseIndex].sets[setIndex][field] = value;
         }
     }
@@ -373,12 +372,14 @@ class GymTracker {
     }
 
     rerenderExerciseSets(exerciseIndex) {
+        const exercise = this.currentWorkout.exercises[exerciseIndex];
+        if (!exercise) return;
+
         const setsContainer = document.getElementById(`sets-${exerciseIndex}`);
         setsContainer.innerHTML = '';
-        
-        const exercise = this.currentWorkout.exercises[exerciseIndex];
+
         exercise.sets.forEach((_, setIndex) => {
-            this.addSet(exerciseIndex);
+            this._renderSet(exerciseIndex, setIndex);
         });
     }
 
